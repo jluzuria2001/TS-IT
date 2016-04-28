@@ -1,0 +1,17 @@
+mqtt-sn-dump
+mqtt-sn-pub
+mqtt-sn-sub
+mqtt-sn-serial-bridge
+*.exe
+*.o
+*.tar.gz
+
+# Code coverage files
+*.gcda
+*.gcno
+coverage/*
+
+# Eclipse project metafiles
+.settings
+.cproject
+.project
