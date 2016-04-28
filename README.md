@@ -8,6 +8,13 @@ MQTT-SN using Z1 boards with Contiki Operative System,
 
 To prepare a physical scenario we need at least:
 
-HW
-- 2 Zolertia Z1 motes
-- 1 Raspberry Pi
+* 2 Zolertia Z1 motes
+* 1 Raspberry Pi
+
+To deploy the scenario: (Launch in different terminals in the next order)
+
+* installconti (install contiki)
+* mqttsnlunchbroker (lunch mqttbroker)
+* mqttsnlunchgateway (lunch the java gateway)
+* mqtest1 (lunch a subscriber)
+* mqtest2 (lunch a publisher)
