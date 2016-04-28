@@ -1,0 +1,15 @@
+CONTIKI_PROJECT = example-dtn
+all: $(CONTIKI_PROJECT)
+
+CONTIKI_SOURCEFILES += dtn.c
+
+CONTIKI_WITH_RIME=1
+
+#WITH_UIP6=1
+#CONTIKI_WITH_IPV6 = 1
+#UIP_CONF_IPV6=1
+#CFLAGS += -DUIP_CONF_IPV6_RPL
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+CONTIKI = ../../..
+include $(CONTIKI)/Makefile.include

@@ -1,0 +1,6 @@
+
+28 Apr 2016 11:07:35 CEST  INFO:  -----------------------------------------Mqtts Gateway starting----------------------------------------
+28 Apr 2016 11:07:35 CEST  INFO:  Loading Mqtts Gateway parameters....
+28 Apr 2016 11:07:35 CEST  INFO:  Gateway paremeters loaded.
+28 Apr 2016 11:07:35 CEST  INFO:  GatewayMsgHandler [18]/[Gateway_24] - Establishing TCP/IP connection with localhost
+28 Apr 2016 11:07:36 CEST  ERROR: GatewayMsgHandler [18]/[Gateway_24] - Failed to establish TCP/IP connection with localhost. Gateway cannot start.
