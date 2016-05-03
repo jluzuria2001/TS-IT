@@ -65,6 +65,7 @@ Subscribing
       -T <topicid>   Pre-defined MQTT-SN topic ID to subscribe to.
       --fe           Enables Forwarder Encapsulation. Mqtt-sn packets are encapsulated according to MQTT-SN Protocol Specification v1.2, chapter 5.5 Forwarder Encapsulation.
       --wlnid        If Forwarder Encapsulation is enabled, wireless node ID for this client. Defaults to process id.
+      --dtn          Enables DTN forwarding of Mqtt-sn messages
       -v             Print messages verbosely, showing the topic name.
       -V             Print messages verbosely, showing current time and the topic name.
 
