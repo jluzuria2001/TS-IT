@@ -1,27 +1,3 @@
-/*
-  MQTT-SN command-line publishing client
-  Copyright (C) 2013 Nicholas Humfrey
-
-  Permission is hereby granted, free of charge, to any person obtaining
-  a copy of this software and associated documentation files (the
-  "Software"), to deal in the Software without restriction, including
-  without limitation the rights to use, copy, modify, merge, publish,
-  distribute, sublicense, and/or sell copies of the Software, and to
-  permit persons to whom the Software is furnished to do so, subject to
-  the following conditions:
-
-  The above copyright notice and this permission notice shall be
-  included in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
 #include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -66,8 +42,7 @@ static void usage()
     fprintf(stderr, "  -T <topicid>   Pre-defined MQTT-SN topic ID to subscribe to.\n");
     fprintf(stderr, "  --fe           Enables Forwarder Encapsulation. Mqtt-sn packets are encapsulated according to MQTT-SN Protocol Specification v1.2, chapter 5.5 Forwarder Encapsulation.\n");
     fprintf(stderr, "  --wlnid        If Forwarder Encapsulation is enabled, wireless node ID for this client. Defaults to process id.\n");
-    fprintf(stderr, "  --dtn          Enables DTN forwarding of Mqtt-sn messages.\n");
-	fprintf(stderr, "  -v             Print messages verbosely, showing the topic name.\n");
+    fprintf(stderr, "  -v             Print messages verbosely, showing the topic name.\n");
     fprintf(stderr, "  -V             Print messages verbosely, showing current time and the topic name.\n");
     exit(EXIT_FAILURE);
 }
@@ -79,79 +54,12 @@ static void parse_opts(int argc, char** argv)
     {
         {"fe",    no_argument,       0, 'f' },
         {"wlnid", required_argument, 0, 'w' },
-	    {"dtn",   no_argument,       0, 'z' },
         {0, 0, 0, 0}
     };
 
     int ch;
     /* getopt_long stores the option index here. */
     int option_index = 0;
-
-    // Parse the options/switches
-    while ((ch = getopt_long(argc, argv, "1cdh:i:k:p:t:T:vV?", long_options, &option_index)) != -1)
-        switch (ch) {
-        case '1':
-            single_message = TRUE;
-            break;
-
-        case 'c':
-            clean_session = FALSE;
-            break;
-
-        case 'd':
-            debug++;
-            break;
-
-        case 'h':
-            mqtt_sn_host = optarg;
-            break;
-
-        case 'i':
-            client_id = optarg;
-            break;
-
-        case 'k':
-            keep_alive = atoi(optarg);
-            break;
-
-        case 'p':
-            mqtt_sn_port = optarg;
-            break;
-
-        case 't':
-            topic_name = optarg;
-            break;
-
-        case 'T':
-            topic_id = atoi(optarg);
-            break;
-
-        case 'f':
-            mqtt_sn_enable_frwdencap();
-            break;
-
-        case 'w' :
-            mqtt_sn_set_frwdencap_parameters((uint8_t*)optarg, strlen(optarg));
-            break;
-
-		case 'z' :
-			mqtt_sn_enable_frwdtn();
-			break;
-			
-        case 'v':
-            // Prevent -v setting verbose level back down to 1 if already set to 2 by -V
-            verbose = (verbose == 0) ? 1 : verbose;
-            break;
-
-        case 'V':
-            verbose = 2;
-            break;
-
-        case '?':
-        default:
-            usage();
-            break;
-        }
 
     // Missing Parameter?
     if (!topic_name && !topic_id) {
@@ -188,7 +96,6 @@ int main(int argc, char* argv[])
     int sock;
 
     mqtt_sn_disable_frwdencap();
-	mqtt_sn_disable_frwdtn();
 
     // Parse the command-line options
     parse_opts(argc, argv);

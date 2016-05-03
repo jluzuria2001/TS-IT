@@ -51,6 +51,7 @@ static time_t last_transmit = 0;
 static time_t last_receive = 0;
 static time_t keep_alive = 0;
 static uint8_t forwarder_encapsulation = FALSE;
+static uint8_t forwarder_dtn = FALSE;
 const uint8_t *wireless_node_id = NULL;
 uint8_t wireless_node_id_len  = 0;
 
@@ -676,6 +677,37 @@ void mqtt_sn_dump_packet(char* packet)
     printf("\n");
 }
 
+void mqtt_sn_fwd_dtn_packet(publish_packet_t* packet)
+{
+			   			   
+	int argcount = 3;
+	const char* binary_name1 = "echo";
+	const char* binary_name2 = "| dtnsend --src reply dtn://ictpdtn2/pager";
+	char myoutput_array[500];
+
+        time_t recv_time;
+	char tm_buffer [40];
+	time(&recv_time);
+	strftime(tm_buffer,40,"%s ",localtime(&recv_time));
+        const char* args[] = {packet->data,",",tm_buffer};
+
+	sprintf(myoutput_array, "%s", binary_name1);
+
+	int i=0;
+	for(i=0; i<argcount; ++i)
+	{
+	    strcat(myoutput_array, " ");
+	    strcat(myoutput_array, args[i]);
+	}
+
+	sprintf(myoutput_array, "%s %s", myoutput_array, binary_name2);
+
+	printf("la cadena es %s \n",myoutput_array);
+	system(myoutput_array);
+							
+}
+
+
 void mqtt_sn_print_publish_packet(publish_packet_t* packet)
 {
     if (verbose) {
@@ -685,10 +717,12 @@ void mqtt_sn_print_publish_packet(publish_packet_t* packet)
             time_t rcv_time;
             char tm_buffer [40];
             time(&rcv_time) ;
-            strftime(tm_buffer, 40, "%F %T ", localtime(&rcv_time));
+		    strftime(tm_buffer, 40, "%s ", localtime(&rcv_time));
+
             fputs(tm_buffer, stdout);
         }
-        switch (topic_type) {
+
+		switch (topic_type) {
         case MQTT_SN_TOPIC_TYPE_NORMAL: {
             const char *topic_name = mqtt_sn_lookup_topic(topic_id);
             if (topic_name) {
@@ -782,10 +816,14 @@ void* mqtt_sn_wait_for(uint8_t type, int sock)
             break;
         } else if (ret > 0) {
             char* packet = mqtt_sn_receive_packet(sock);
+
             if (packet) {
                 switch(packet[1]) {
                     case MQTT_SN_TYPE_PUBLISH:
                         mqtt_sn_print_publish_packet((publish_packet_t *)packet);
+						if (forwarder_dtn) {
+							mqtt_sn_fwd_dtn_packet((publish_packet_t *)packet);
+						}
                         break;
 
                     case MQTT_SN_TYPE_REGISTER:
@@ -965,14 +1003,32 @@ void fprint_wlnid(FILE * stream, const uint8_t *wireless_node_id, uint8_t wirele
         fprintf(stream, "%02X", wireless_node_id[i]);
 }
 
+
+uint8_t mqtt_sn_enable_frwdtn() {
+    return forwarder_dtn = TRUE;
+}
+
+
+uint8_t mqtt_sn_disable_frwdtn() {
+    return forwarder_dtn = FALSE;
+}
+
+
+void mqtt_sn_set_frwdtn_parameters(const uint8_t *wlnid, uint8_t wlnid_len) {
+    wireless_node_id = wlnid;
+    wireless_node_id_len = wlnid_len;
+}
+
+
+
 void log_msg(const char* level, const char* format, va_list arglist)
 {
     time_t log_time;
     char tm_buffer[40];
 
     time(&log_time);
-    strftime(tm_buffer, sizeof(tm_buffer), "%F %T ", localtime(&log_time));
-
+    strftime(tm_buffer, sizeof(tm_buffer), "%s ", localtime(&log_time));
+    
     fputs(tm_buffer, stderr);
     fputs(level, stderr);
     vfprintf(stderr, format, arglist);
