@@ -13,6 +13,7 @@ Supported Features
 - Displaying topic name with wildcard subscriptions
 - Pre-defined topic IDs and short topic names
 - Forwarder encapsulation according to MQTT-SN Protocol Specification v1.2.
+- Forwarding of MQTT-SN received messages to an DTN-node.
 
 
 Limitations
