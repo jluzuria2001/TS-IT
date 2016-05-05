@@ -23,9 +23,8 @@ obj_z1/contiki-z1-main.o: ../../../platform/z1/./contiki-z1-main.c \
  ../../../core/./net/netstack.h ../../../core/./net/llsec/llsec.h \
  ../../../core/./net/mac/mac.h ../../../core/./net/mac/rdc.h \
  ../../../core/./net/mac/framer.h ../../../core/./net/mac/frame802154.h \
- ../../../core/./net/linkaddr.h ../../../core/./dev/button-sensor.h \
- ../../../core/./lib/sensors.h ../../../platform/z1/./dev/adxl345.h \
- ../../../platform/z1/./dev/i2cmaster.h \
+ ../../../core/./net/linkaddr.h ../../../platform/z1/./dev/adxl345.h \
+ ../../../platform/z1/./dev/i2cmaster.h ../../../core/./lib/sensors.h \
  ../../../core/./net/ipv6/uip-ds6.h ../../../core/./net/ip/uip.h \
  ../../../core/./net/ip/uipopt.h ../../../core/./net/ip/tcpip.h \
  ../../../core/./sys/stimer.h ../../../core/./net/ipv6/uip-nd6.h \
@@ -55,8 +54,7 @@ obj_z1/contiki-z1-main.o: ../../../platform/z1/./contiki-z1-main.c \
  ../../../core/./net/rime/trickle.h ../../../core/./sys/node-id.h \
  ../../../platform/z1/./cfs-coffee-arch.h \
  ../../../platform/z1/./contiki-conf.h ../../../core/./cfs/cfs-coffee.h \
- ../../../core/./cfs/cfs.h ../../../core/./sys/autostart.h \
- ../../../core/./dev/battery-sensor.h ../../../dev/sht11/sht11-sensor.h
+ ../../../core/./cfs/cfs.h ../../../core/./sys/autostart.h
 ../../../platform/z1/./contiki-z1-main.c :
  ../../../core/./contiki.h ../../../core/./contiki-version.h :
  ../../../platform/z1/./contiki-conf.h :
@@ -82,9 +80,8 @@ obj_z1/contiki-z1-main.o: ../../../platform/z1/./contiki-z1-main.c \
  ../../../core/./net/netstack.h ../../../core/./net/llsec/llsec.h :
  ../../../core/./net/mac/mac.h ../../../core/./net/mac/rdc.h :
  ../../../core/./net/mac/framer.h ../../../core/./net/mac/frame802154.h :
- ../../../core/./net/linkaddr.h ../../../core/./dev/button-sensor.h :
- ../../../core/./lib/sensors.h ../../../platform/z1/./dev/adxl345.h :
- ../../../platform/z1/./dev/i2cmaster.h :
+ ../../../core/./net/linkaddr.h ../../../platform/z1/./dev/adxl345.h :
+ ../../../platform/z1/./dev/i2cmaster.h ../../../core/./lib/sensors.h :
  ../../../core/./net/ipv6/uip-ds6.h ../../../core/./net/ip/uip.h :
  ../../../core/./net/ip/uipopt.h ../../../core/./net/ip/tcpip.h :
  ../../../core/./sys/stimer.h ../../../core/./net/ipv6/uip-nd6.h :
@@ -115,4 +112,3 @@ obj_z1/contiki-z1-main.o: ../../../platform/z1/./contiki-z1-main.c \
  ../../../platform/z1/./cfs-coffee-arch.h :
  ../../../platform/z1/./contiki-conf.h ../../../core/./cfs/cfs-coffee.h :
  ../../../core/./cfs/cfs.h ../../../core/./sys/autostart.h :
- ../../../core/./dev/battery-sensor.h ../../../dev/sht11/sht11-sensor.h :

@@ -48,8 +48,8 @@
 #define AI_DEFAULT (AI_ADDRCONFIG|AI_V4MAPPED)
 #endif
 
-//static uint8_t debug = FALSE;
-static uint8_t debug = TRUE;
+static uint8_t debug = FALSE;
+//static uint8_t debug = TRUE;
 
 topic_map_t *topic_map = NULL;
 
@@ -265,10 +265,10 @@ PROCESS_THREAD(mqtt_sn_process, ev, data)
     else if (ev == receive_timeout_event){
       //if last receive has expired we need to stop and disconnect
       printf("receive timeout event");
-      mqtt_sn_send_disconnect(mqc);
-      if(mqc->mc->keepalive_timeout != NULL) {
-        mqc->mc->keepalive_timeout(mqc);
-      }
+//      mqtt_sn_send_disconnect(mqc);
+//      if(mqc->mc->keepalive_timeout != NULL) {
+//        mqc->mc->keepalive_timeout(mqc);
+//      }
     }
     else if (ev == send_timeout_event){
       //if last send has expired, we need to send a pingreq

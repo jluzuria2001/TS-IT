@@ -1,40 +1,17 @@
 /*
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This file is part of the Contiki operating system.
- *
- */
-
-/*
   Basic MQTT-SN client library
   Copyright (C) 2013 Nicholas Humfrey
   Copyright (C) 2013 Adam Renner
+  Copyright (C) 2016 Jorge Luzuriaga
   adapted to work with z1 at 16.04.15
-  last modified: 16.04.22
+  last modified: 16.04.29
 */
-
+/*
+#include <time.h>
+#include <sys/time.h>
+#include "clock.h"
+#include "dev/leds.h"
+*/
 
 #include "contiki.h"
 #include "mqtt-sn.h"
@@ -43,6 +20,7 @@
 #include "lib/random.h"
 #include "sys/ctimer.h"
 #include "sys/etimer.h"
+
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/rime/rime.h"
@@ -50,42 +28,51 @@
 #include <stdio.h>
 #include <string.h>
 
-//#define UDP_PORT 1884
+//#include "dev/adxl345.h"
+//#include "dev/i2cmaster.h"
+#include "dev/tmp102.h"
+//#include "dev/button-sensor.h"
+
 #define UDP_PORT 20000
 
-//#define REQUEST_RETRIES 4
-//#define DEFAULT_SEND_INTERVAL		(10 * CLOCK_SECOND)
+#define REQUEST_RETRIES 4
+#define DEFAULT_SEND_INTERVAL (1 * CLOCK_SECOND)
 //#define REPLY_TIMEOUT (3 * CLOCK_SECOND)
-
-#define REQUEST_RETRIES 10
-#define DEFAULT_SEND_INTERVAL		(20 * CLOCK_SECOND)
 #define REPLY_TIMEOUT (10 * CLOCK_SECOND)
 
+static struct 	mqtt_sn_connection mqtt_sn_c;
 
-static struct mqtt_sn_connection mqtt_sn_c;
-static char   *mqtt_client_id="zolertia-z1-node";
-//static char   ctrl_topic[22] = "temperatura/controlo"; //of form "0011223344556677/ctrl" it is null terminated, and is 21 charactes
-//static char   pub_topic[21] = "temperatura/message";
-static char ctrl_topic[22] = "0000000000000000/ctrl\0";  //of form "0011223344556677/ctrl" it is null terminated, and is 21 charactes
-static char pub_topic[21] = "0000000000000000/msg\0";
+static char 	device_id[17];
+static char   	*mqtt_client_id	= "zolertia-z1-node";
+static char 	ctrl_topic[22] 	= "0000000000000000/ctrl\0";  //of form "0011223344556677/ctrl" it is null terminated, and is 21 charactes
+static char 	pub_topic[21]  	= "0000000000000000/msg\0";
+
 static uint16_t ctrl_topic_id;
 static uint16_t publisher_topic_id;
-static publish_packet_t incoming_packet;
 static uint16_t ctrl_topic_msg_id;
 static uint16_t reg_topic_msg_id;
 static uint16_t mqtt_keep_alive=21;
-//static uint16_t mqtt_keep_alive=30;
-//static int8_t qos = 1;
-static int8_t qos = 0;
-static uint8_t retain = FALSE;
-static char device_id[17];
-static clock_time_t send_interval;
+
+static int8_t 	qos = 0;
+static uint8_t 	retain = FALSE;
+
+static clock_time_t 	send_interval;
+static publish_packet_t incoming_packet;
 static mqtt_sn_subscribe_request subreq;
-static mqtt_sn_register_request regreq;
-//uint8_t debug = FALSE;
-//uint8_t debug = TRUE;
+static mqtt_sn_register_request  regreq;
+
+uint8_t debug = TRUE;
 
 static enum mqttsn_connection_status connection_state = MQTTSN_DISCONNECTED;
+
+struct test_msg{
+	uint16_t 	seq_num;
+	uint8_t 	node_id;
+	uint8_t 	value1;
+	rtimer_clock_t 	sender_timestamp;
+	clock_time_t 	clock_timestamp;
+};
+
 
 /*A few events for managing device state*/
 static process_event_t mqttsn_connack_event;
@@ -95,6 +82,8 @@ PROCESS(publish_process, "register topic and publish data");
 PROCESS(ctrl_subscription_process, "subscribe to a device control channel");
 
 AUTOSTART_PROCESSES(&example_mqttsn_process);
+
+
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -159,6 +148,7 @@ publish_receiver(struct mqtt_sn_connection *mqc, const uip_ipaddr_t *source_addr
   if (uip_htons(incoming_packet.topic_id) == ctrl_topic_id) {
     //the new message interval will be read from the first byte of the recieved packet
     send_interval = (uint8_t)incoming_packet.data[0] * CLOCK_CONF_SECOND;
+	printf("data: %s\n", incoming_packet.data);
   } else {
     printf("unknown publication received\n");
   }
@@ -178,25 +168,28 @@ static const struct mqtt_sn_callbacks mqtt_sn_call = {
   NULL
   };
 
+
 /*---------------------------------------------------------------------------*/
 /*this process will publish data at regular intervals*/
 PROCESS_THREAD(publish_process, ev, data)
 {
   static uint8_t registration_tries;
-  static struct etimer send_timer;
+  static struct  etimer send_timer;
   static uint8_t buf_len;
-  static uint8_t message_number;
-  static char buf[20];
+  static uint16_t message_number;
+  static char    buf[20];
   static mqtt_sn_register_request *rreq = &regreq;
+
+  struct test_msg msg;
 
   PROCESS_BEGIN();
   send_interval = DEFAULT_SEND_INTERVAL;
-  memcpy(pub_topic,device_id,16);
+  memcpy(pub_topic, pub_topic, 16);
   printf("registering topic\n");
-  registration_tries =0;
+  registration_tries = 0;
+
   while (registration_tries < 4)
   {
-    printf("--registration try: %d \n", registration_tries);
     reg_topic_msg_id = mqtt_sn_register_try(rreq, &mqtt_sn_c, pub_topic, REPLY_TIMEOUT);
     PROCESS_WAIT_EVENT_UNTIL(mqtt_sn_request_returned(rreq));
     if (mqtt_sn_request_success(rreq)) {
@@ -210,19 +203,40 @@ PROCESS_THREAD(publish_process, ev, data)
       }
     }
   }
-  /////////////////////////////////////////////////////////////////aqui estamos
+
   if (mqtt_sn_request_success(rreq)){
     //start topic publishing to topic at regular intervals
     etimer_set(&send_timer, send_interval);
-    while(1)
+    while(message_number<1800)
     {
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-      printf("publishing \n ");
-      sprintf(buf, "Message %d", message_number);
+
+	  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+
+	  //prepare the package
+	  msg.seq_num = message_number;
+	  msg.node_id = 0xAB;
+	  msg.value1  = tmp102.value(TMP102_READ);
+	  msg.value1  = tmp102_read_temp_x100();
+	  msg.clock_timestamp = (unsigned long)clock_time();
+	  //msg.sender_timestamp = (unsigned int)RTIMER_NOW();
+
+  	  
+      /* Print the sensor data */
+      printf("nodeID: %u, temp: %u, counter: %u, ts1: %lu\n",
+                  msg.node_id, msg.value1, msg.seq_num, msg.clock_timestamp);
+
+      sprintf(buf, "%u, %u, %u, %lu",
+                    msg.node_id, msg.value1, msg.seq_num, msg.clock_timestamp);
+
+  //  printf("publishing Msg %d \n", message_number);
+  //  sprintf(buf, "Message: %d Node: %s", message_number, device_id);
+
       message_number++;
+			
       buf_len = strlen(buf);
-      mqtt_sn_send_publish(&mqtt_sn_c, publisher_topic_id,MQTT_SN_TOPIC_TYPE_NORMAL,buf, buf_len,qos,retain);
-      etimer_set(&send_timer, send_interval);
+
+	  mqtt_sn_send_publish(&mqtt_sn_c, publisher_topic_id, MQTT_SN_TOPIC_TYPE_NORMAL, buf, buf_len, qos, retain);
+		etimer_set(&send_timer, send_interval);
     }
   } else {
     printf("unable to register topic\n");
@@ -240,14 +254,14 @@ PROCESS_THREAD(ctrl_subscription_process, ev, data)
   static mqtt_sn_subscribe_request *sreq = &subreq;
   PROCESS_BEGIN();
   subscription_tries = 0;
-  memcpy(ctrl_topic,device_id,16);
+  memcpy(ctrl_topic,ctrl_topic,16);
   printf("requesting subscription\n");
+
   while(subscription_tries < 4) {
                             //subscribe.request, mqtt_connection, topic_name, qos, time_out
     ctrl_topic_msg_id = mqtt_sn_subscribe_try(sreq, &mqtt_sn_c, ctrl_topic, 0, REPLY_TIMEOUT);
     PROCESS_WAIT_EVENT_UNTIL(mqtt_sn_request_returned(sreq));
 
-	///// aqui llego registering topic
     if (mqtt_sn_request_success(sreq)) {
       subscription_tries = 4;
       printf("subscription acked\n");
@@ -266,7 +280,6 @@ PROCESS_THREAD(ctrl_subscription_process, ev, data)
 /*---------------------------------------------------------------------------*/
 /*this main process will create connection and register topics*/
 /*---------------------------------------------------------------------------*/
-
 
 static struct ctimer connection_timer;
 static process_event_t connection_timeout_event;
@@ -289,20 +302,14 @@ PROCESS_THREAD(example_mqttsn_process, ev, data)
 
 //  mqtt_sn_set_debug(1);
 
-  uip_ip6addr(&broker_addr, 0xaaaa, 0, 0, 0, 0, 0, 0, 1);
-  //uip_ip6addr(&broker_addr, 0x2001, 0x0db8, 1, 0xffff, 0, 0, 0xc0a8, 0xd480);//192.168.212.128 with tayga
-  //uip_ip6addr(&broker_addr, 0xaaaa, 0, 2, 0xeeee, 0, 0, 0xc0a8, 0xd480);//192.168.212.128 with tayga
-  //uip_ip6addr(&broker_addr, 0xaaaa, 0, 2, 0xeeee, 0, 0, 0xac10, 0xdc01);//172.16.220.1 with tayga
-  //uip_ip6addr(&broker_addr, 0xaaaa, 0, 2, 0xeeee, 0, 0, 0xac10, 0xdc80);//172.16.220.128 with tayga
-   //2001:760:2e0b:1720:2892:a4c4:91b4:e1bf
-  //uip_ip6addr(&broker_addr, 0x2001, 0x760, 0x2e0b, 0x1724, 0, 0, 0, 0x1); //broker ICTP tun0 interface
-  //uip_ip6addr(&broker_addr, 0x2001, 0x760, 0x2e0b, 0x1720, 0x10be, 0xdaa3, 0x193f, 0x40ec); //my computer
-  //uip_ip6addr(&broker_addr, 0xaaaa, 0, 0, 0, 0xc30c, 0, 0, 1);
+  tmp102_init();
+  uip_ip6addr(&broker_addr, 0x2001, 0x760, 0x2e0b, 0x1724, 0, 0, 0, 1);
 
   mqtt_sn_create_socket(&mqtt_sn_c,UDP_PORT, &broker_addr, UDP_PORT);
   (&mqtt_sn_c)->mc = &mqtt_sn_call;
 
-  printf("my @: %02X%02X%02X%02X%02X%02X%02X%02X\n",
+  	
+  sprintf(device_id, "%02X%02X%02X%02X%02X%02X%02X%02X\n",
 	linkaddr_node_addr.u8[0],
         linkaddr_node_addr.u8[1],
 	linkaddr_node_addr.u8[2],
@@ -311,10 +318,16 @@ PROCESS_THREAD(example_mqttsn_process, ev, data)
 	linkaddr_node_addr.u8[5],
 	linkaddr_node_addr.u8[6],
         linkaddr_node_addr.u8[7]);
+	
+ if(strcmp(device_id,"0") == 0) {
+	printf("Node id not set\n");
+  } else {
+	 printf("Node id is set to %s.\n", device_id);
+  }
 
+	
   /*Wait a little to let system get set*/
-  etimer_set(&periodic_timer, 500*CLOCK_SECOND);
-  //etimer_set(&periodic_timer, 17*CLOCK_SECOND);
+  etimer_set(&periodic_timer, 17*CLOCK_SECOND);
   PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
 
   /*Request a connection and wait for connack*/
@@ -346,11 +359,17 @@ PROCESS_THREAD(example_mqttsn_process, ev, data)
     }
   }
   ctimer_stop(&connection_timer);
+
   if (connection_state == MQTTSN_CONNECTED){
-    process_start(&ctrl_subscription_process, 0);
+
+	//INIT THE SUBSCRITION
+	process_start(&ctrl_subscription_process, 0);
     etimer_set(&periodic_timer, 5*CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-    process_start(&publish_process, 0);
+
+	//INIT THE PUBLICATION
+	process_start(&publish_process, 0);
+
     //monitor connection
     while(1)
     {
