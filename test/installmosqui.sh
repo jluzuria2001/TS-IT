@@ -9,8 +9,11 @@ git checkout origin/1.4
 ## MAKE MANUALLY
 ## /-THE-/-PATH-/-TO-/
 ## nano config.mk 
-## ensure that the websockets option is set to “yes”.
-## [ WITH_WEBSOCKETS:=yes ]
+##
+## ensure that the options are set to “no”.
+## websockets	[ WITH_WEBSOCKETS:=no ]
+## SRV lookup 	[ WITH_SRV:=no ]
+
 
 
 sudo apt-get install uuid-dev xsltproc docbook-xsl
